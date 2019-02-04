@@ -43,7 +43,7 @@ class MyMap
             for(int i = this->depth; i > Tree->deth; i--)
                 cout << "\t";
 //            cout << Tree->x << "-" << Tree->x2;
-            cout << Tree->x;;
+            cout << Tree->x;
             show(Tree->r);
         }
         else
@@ -51,7 +51,29 @@ class MyMap
             cout <<  '\n';
         }
     }
-
+    void approve()
+    {
+        vector <T> bufer;
+        approve(Tree, bufer);
+        for (int i=0; i < bufer.size() - 1; i++)
+            if (bufer.at(i) > bufer.at(i+1))
+            {
+                qDebug() << "ATTENTION " << bufer.at(i);
+                qDebug() << bufer;
+                this->show();
+                exit(0);
+            }
+        qDebug() << bufer;
+    }
+    void approve(Node<T, T2> *&MyTree, vector <T> &bufer)
+    {
+        if (MyTree != NULL) //Пока не встретится пустое звено
+        {
+            approve(MyTree->l, bufer);
+            bufer.push_back(MyTree->x);
+            approve(MyTree->r, bufer);
+        }
+    }
     void count_deth(Node<T, T2> *&Tree, int arg)
     {
         if (Tree != NULL)
@@ -77,6 +99,13 @@ class MyMap
         if (temp[0] == Tree)
         {
             qDebug() << "ITEM HEAD OF THIS TREE" << endl;
+            if (get_for_replace(temp[0], temp[0]) == NULL)
+            {
+                qDebug() << "ATTANTION i can not replace item because can not find a replacement for it " << temp[0]->x;
+                this->show();
+                exit(0);
+            }
+            qDebug() << "test " << get_for_replace(temp[0], temp[0])->x;
             return void();
         }
         temp[0]->mtx.lock();
@@ -109,19 +138,30 @@ class MyMap
             return void();
         }
         if (temp[0]->l != NULL && temp[0]->r == NULL)
+        {
             qDebug() << "object with only one LEFT children" << endl;
-        if (temp[1]->l == temp[0])
-            temp[1]->l = temp[0]->l;
-        if (temp[1]->r == temp[0])
-            temp[1]->r = temp[0]->l;
-        temp[0]->mtx.unlock();
-        temp[1]->mtx.unlock();
-        delete temp[0];
-        temp[0] = NULL;
-        return void();
+            if (temp[1]->l == temp[0])
+                temp[1]->l = temp[0]->l;
+            if (temp[1]->r == temp[0])
+                temp[1]->r = temp[0]->l;
+            temp[0]->mtx.unlock();
+            temp[1]->mtx.unlock();
+            delete temp[0];
+            temp[0] = NULL;
+            return void();
+        }
         if (temp[0]->l != NULL && temp[0]->r != NULL && temp[0] != temp[1])
         {
+            temp[0]->mtx.unlock();
+//            temp[1]->mtx.unlock();
             qDebug() << "OBJECT WHITH 2 CHILD AND PARENT";
+            if (get_for_replace(temp[0], temp[0]) == NULL)
+            {
+                qDebug() << "ATTANTION i can not replace item because can not find a replacement for it " << temp[0]->x;
+                this->show();
+                exit(0);
+            }
+            qDebug() << "test " << get_for_replace(temp[0], temp[0])->x;
 //            T deletedX = temp[0]->x;
 //            Node<T, T2> node;
 //            while (node.)
@@ -243,12 +283,55 @@ class MyMap
         }
         return NULL;
     }
-
+    Node<T, T2>* get_for_replace(Node<T, T2> *&MyTree, Node<T, T2> *&copyMyTree)  // copyMyTree ссылка.
+    {                                                                                   // если объект заменится
+//        MyTree->mtx.lock();                                                             // изменится ссылка
+//        qDebug() << MyTree->x;
+        if (MyTree->l == NULL && MyTree->r == NULL)                                     // в родительском элементе
+        {                                                                               // может передавать ссылку
+//            copyMyTree->mtx.lock();                                                     // на родителя???????????
+//            copyMyTree->l->mtx.lock();
+//            copyMyTree->r->mtx.lock();
+            if (MyTree->x > copyMyTree->l->x && MyTree->x < copyMyTree->r->x)
+            {
+                qDebug() << "     qqqqqqqqq" << copyMyTree->l->x << " " << copyMyTree->r->x;
+//                MyTree->mtx.unlock();
+//                copyMyTree->mtx.unlock();
+//                copyMyTree->l->mtx.unlock();
+//                copyMyTree->r->mtx.unlock();
+                return MyTree;
+            }
+            else
+            {
+//                MyTree->mtx.unlock();
+//                copyMyTree->mtx.unlock();
+//                copyMyTree->l->mtx.unlock();
+//                copyMyTree->r->mtx.unlock();
+                return NULL;
+            }
+        }
+        else
+        {
+            Node<T, T2> *tempL = MyTree->l;
+            Node<T, T2> *tempR = MyTree->r;
+//            MyTree->mtx.unlock();
+            if (tempR != NULL && get_for_replace(tempR, copyMyTree) != NULL)
+            {
+                return get_for_replace(tempR, copyMyTree);
+            }
+            if (tempL != NULL && get_for_replace(tempL, copyMyTree) != NULL)
+            {
+                return get_for_replace(tempL, copyMyTree);
+            }
+        }
+//        MyTree->mtx.unlock();
+//        return NULL;
+    }
 };
 
 int main()
 {
-    MyMap <int, int> obj;
+    MyMap <double, double> obj;
     obj.add_node(81,1);
     obj.add_node(49,1);
     obj.add_node(34,1);
@@ -256,6 +339,7 @@ int main()
     obj.add_node(52,1);
     obj.add_node(54,1);
     obj.add_node(53,1);
+    obj.add_node(51,1);
 //    obj.add_node(50,0);
     obj.add_node(50,0);
     obj.add_node(94,1);
@@ -267,14 +351,15 @@ int main()
 //    thread t2 (&MyMap<int,int>::add_node, obj, 1, 1);
 //    t1.join();
 //    t2.join();
-    thread t1 (&MyMap<int,int>::del, obj, 52);
-    thread t2 (&MyMap<int,int>::del, obj, 52);
-    thread t3 (&MyMap<int,int>::del, obj, 52);
-    t1.join();
-    t2.join();
-    t3.join();
-
+//    thread t1 (&MyMap<double,double>::del, obj, 81);
+//    thread t2 (&MyMap<double,double>::del, obj, 81);
+//    thread t3 (&MyMap<double,double>::del, obj, 81);
+//    t1.join();
+//    t2.join();
+//    t3.join();
+//    obj.Tree->l->r->r->r->l->x = 1;
     obj.show();
+    obj.approve();
 
 //    cout << ("11kkj0" < "1kkj0") ? true : false;
 //    cout << strcmp("11kkj0", "1kkj0") ? true:false;
