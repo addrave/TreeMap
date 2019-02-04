@@ -63,7 +63,6 @@ class MyMap
                 this->show();
                 exit(0);
             }
-        qDebug() << bufer;
     }
     void approve(Node<T, T2> *&MyTree, vector <T> &bufer)
     {
@@ -101,11 +100,23 @@ class MyMap
             qDebug() << "ITEM HEAD OF THIS TREE" << endl;
             if (get_for_replace(temp[0], temp[0]) == NULL)
             {
-                qDebug() << "ATTANTION i can not replace item because can not find a replacement for it " << temp[0]->x;
-                this->show();
-                exit(0);
+//                Tree->r->l = Tree->l;     // добавить очистку памяти
+//                qDebug() << &Tree;
+//                this->Tree = this->Tree->r;
+                this->Tree->x = this->Tree->r->x;
+                this->Tree->x2 = this->Tree->r->x2;
+//                this->Tree->l = this->Tree->r->l;
+                this->Tree->r = this->Tree->r->r;
+//                this->Tree->deth = this->Tree->r->deth;
+//                delete Tree->r;
+//                qDebug() << &Tree;
+//                Tree->x = 1111;
+//                qDebug() << "ATTANTION i can not replace item because can not find a replacement for it " << temp[0]->x;
+//                this->show();
+//                exit(0);
             }
-            qDebug() << "test " << get_for_replace(temp[0], temp[0])->x;
+
+//            qDebug() << "test " << get_for_replace(temp[0], temp[0])->x;
             return void();
         }
         temp[0]->mtx.lock();
@@ -153,15 +164,30 @@ class MyMap
         if (temp[0]->l != NULL && temp[0]->r != NULL && temp[0] != temp[1])
         {
             temp[0]->mtx.unlock();
-//            temp[1]->mtx.unlock();
+            temp[1]->mtx.unlock();
             qDebug() << "OBJECT WHITH 2 CHILD AND PARENT";
             if (get_for_replace(temp[0], temp[0]) == NULL)
             {
-                qDebug() << "ATTANTION i can not replace item because can not find a replacement for it " << temp[0]->x;
-                this->show();
-                exit(0);
+//                qDebug() << "ATTANTION i can not replace item because can not find a replacement for it " << temp[0]->x;
+//                this->show();
+//                exit(0);
+                temp[0]->r->l = temp[0]->l;
+                if (temp[1]->l == temp[0])
+                    temp[1]->l = temp[0]->r;
+                if (temp[1]->r == temp[0])
+                    temp[1]->r = temp[0]->r;
             }
-            qDebug() << "test " << get_for_replace(temp[0], temp[0])->x;
+            else
+            {
+                Node <T, T2> *a1 = get_for_replace(temp[0], temp[0]);
+                T xx = a1->x;
+                T2 xx2 = a1->x2;
+//            temp[1]->mtx.unlock();
+                del(xx);        // не вызывать саму себя, если не убедился что мьютексы сняты
+                temp[0]->x = xx;
+                temp[0]->x2 = xx2;
+            }
+
 //            T deletedX = temp[0]->x;
 //            Node<T, T2> node;
 //            while (node.)
@@ -294,7 +320,7 @@ class MyMap
 //            copyMyTree->r->mtx.lock();
             if (MyTree->x > copyMyTree->l->x && MyTree->x < copyMyTree->r->x)
             {
-                qDebug() << "     qqqqqqqqq" << copyMyTree->l->x << " " << copyMyTree->r->x;
+//                qDebug() << "     qqqqqqqqq" << copyMyTree->l->x << " " << copyMyTree->r->x;
 //                MyTree->mtx.unlock();
 //                copyMyTree->mtx.unlock();
 //                copyMyTree->l->mtx.unlock();
@@ -334,30 +360,37 @@ int main()
     MyMap <double, double> obj;
     obj.add_node(81,1);
     obj.add_node(49,1);
-    obj.add_node(34,1);
-    obj.add_node(51,111);
-    obj.add_node(52,1);
-    obj.add_node(54,1);
-    obj.add_node(53,1);
-    obj.add_node(51,1);
+//    obj.add_node(34,1);
+//    obj.add_node(51,111);
+//    obj.add_node(52,1);
+//    obj.add_node(54,1);
+//    obj.add_node(53,1);
+//    obj.add_node(51,1);
+////    obj.add_node(50,0);
 //    obj.add_node(50,0);
-    obj.add_node(50,0);
-    obj.add_node(94,1);
-    obj.add_node(93,1);
+//    obj.add_node(94,1);
+//    obj.add_node(93,1);
     obj.add_node(100,1);
+    obj.add_node(101,1);
+    obj.add_node(4,1);
     obj.show();
 //    qDebug() << obj.get_value(52);
 //    thread t1 (&MyMap<int,int>::add_node, obj, 1, 1);
 //    thread t2 (&MyMap<int,int>::add_node, obj, 1, 1);
 //    t1.join();
 //    t2.join();
-//    thread t1 (&MyMap<double,double>::del, obj, 81);
-//    thread t2 (&MyMap<double,double>::del, obj, 81);
+    thread t1 (&MyMap<double,double>::del, obj, 81);
+    Sleep(1000);
+    obj.show();
+    thread t2 (&MyMap<double,double>::del, obj, 49);
 //    thread t3 (&MyMap<double,double>::del, obj, 81);
-//    t1.join();
-//    t2.join();
+    t1.join();
+    t2.join();
 //    t3.join();
 //    obj.Tree->l->r->r->r->l->x = 1;
+//    obj.del(81);
+    qDebug() << obj.Tree->x;
+    obj.show();
     obj.show();
     obj.approve();
 
