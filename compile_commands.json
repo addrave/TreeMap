@@ -1,0 +1,40 @@
+[
+{
+    "arguments": [
+        "clang++",
+        "-c",
+        "-m32",
+        "-target",
+        "i686-w64-mingw32",
+        "-std=gnu++11",
+        "-fcxx-exceptions",
+        "-fexceptions",
+        "-DUNICODE",
+        "-D_UNICODE",
+        "-DWIN32",
+        "-DQT_DEPRECATED_WARNINGS",
+        "-DQT_QML_DEBUG",
+        "-DQT_NO_DEBUG",
+        "-DQT_CORE_LIB",
+        "-DBOOST_TYPE_INDEX_CTTI_USER_DEFINED_PARSING=(39, 1, true, \"T = \")",
+        "-fPIC",
+        "-I",
+        "C:\\Users\\stoun\\Documents\\untitled8",
+        "-I",
+        "C:\\Qt\\5.11.0\\mingw53_32\\include",
+        "-I",
+        "C:\\Qt\\5.11.0\\mingw53_32\\include\\QtCore",
+        "-I",
+        "C:\\Users\\stoun\\Documents\\build-untitled8-Desktop_Qt_5_11_0_MinGW_32bit-Profile\\release",
+        "-I",
+        "C:\\Users\\stoun\\Documents\\build-untitled8-Desktop_Qt_5_11_0_MinGW_32bit-Profile",
+        "-I",
+        "C:\\Qt\\5.11.0\\mingw53_32\\mkspecs\\win32-g++",
+        "-x",
+        "c++",
+        "C:\\Users\\stoun\\Documents\\untitled8\\main.cpp"
+    ],
+    "directory": "C:/Users/stoun/Documents/build-untitled8-Desktop_Qt_5_11_0_MinGW_32bit-Profile",
+    "file": "C:/Users/stoun/Documents/untitled8/main.cpp"
+}
+]
