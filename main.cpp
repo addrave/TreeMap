@@ -136,14 +136,14 @@ class MyMap
         node = get_value_(key, Tree, Tree);
         if (node == nullptr)
         {
-            qDebug() << "ITEM NOT FOUND (DEl) whith key " << key << endl;
+//            qDebug() << "ITEM NOT FOUND (DEl) whith key " << key << endl;
             return void();
         }
         if (node[0] == Tree)
         {
             not_nullptr(Tree);
             Tree->mtx.lock();
-            qDebug() << "ITEM HEAD OF THIS TREE" << endl;
+//            qDebug() << "ITEM HEAD OF THIS TREE" << endl;
 
             if (Tree->l == nullptr && Tree->r == nullptr) // дебажить!
             {
@@ -213,10 +213,10 @@ class MyMap
         not_nullptr(node[1]);
         node[0]->mtx.lock();
         node[1]->mtx.lock();
-        qDebug() << '\n' << node[0]->x << '\t' << node[1]->x << '\t';
+//        qDebug() << '\n' << node[0]->x << '\t' << node[1]->x << '\t';
         if (node[0]->l == nullptr && node[0]->r == nullptr)
         {
-            qDebug() << "object without children" << endl;
+//            qDebug() << "object without children" << endl;
             if (node[1]->l == node[0])
                 node[1]->l = nullptr;
             if (node[1]->r == node[0])
@@ -229,7 +229,7 @@ class MyMap
         }
         if (node[0]->l == nullptr && node[0]->r != nullptr)
         {
-            qDebug() << "object with only one RIGHT children" << endl;
+//            qDebug() << "object with only one RIGHT children" << endl;
             if (node[1]->l == node[0])
                 node[1]->l = node[0]->r;
             if (node[1]->r == node[0])
@@ -242,7 +242,7 @@ class MyMap
         }
         if (node[0]->l != nullptr && node[0]->r == nullptr)
         {
-            qDebug() << "object with only one LEFT children" << endl;
+//            qDebug() << "object with only one LEFT children" << endl;
             if (node[1]->l == node[0])
                 node[1]->l = node[0]->l;
             if (node[1]->r == node[0])
@@ -263,11 +263,12 @@ class MyMap
             node[0]->r->mtx.lock();
             T MTLx = node[0]->l->x;
             T MTRx = node[0]->r->x;
+            T MTx = node[0]->x;
             node[0]->l->mtx.unlock();
             node[0]->r->mtx.unlock();
 
             node[0]->mtx.unlock();
-            qDebug() << "OBJECT WHITH 2 CHILD AND PARENT";
+//            qDebug() << "OBJECT WHITH 2 CHILD AND PARENT";
             Node <T, T2> *a1 = get_for_replace(node[0], MTLx, MTRx);
             if (a1 == nullptr)
             {
@@ -288,50 +289,119 @@ class MyMap
                 node[1]->mtx.unlock();
             }
             else
-            {
-                not_nullptr(a1);
-                a1->mtx.lock();
-                T xx = a1->x;
-                T2 xx2 = a1->x2;
-                a1->mtx.unlock();
-                Node<T, T2> **nodeTemp = get_value_(xx, Tree, Tree);
-//                a1->mtx.lock();
-                not_nullptr(node[0]);
-                node[0]->mtx.lock();
-                not_nullptr(node[0]->l);
-                node[0]->l->mtx.lock();
-                not_nullptr(node[0]->r);
-                node[0]->r->mtx.lock();
-                if (MTLx == node[0]->l->x && MTRx == node[0]->r->x)
+            {   QVector <Node<T,T2>*> vecLockMtx;
+                not_nullptr(a1,"a1");
+                a1->mtx.lock();                                 // a1
+//                if (!vecLockMtx.contains(a1)) {a1->mtx.lock(); vecLockMtx.push_back(a1);} else qDebug() << "FUCKA1";
+                T a1x = a1->x;
+                a1->mtx.unlock();// ТАК ЧТО ПРОВЕРИТЬ ЕГО ПОДЛИННОСТЬ!!!!!
+                Node<T, T2> **nodeTemp = get_value_(a1x, Tree, Tree);
+                not_nullptr(node[0], "node[0]->");
+//                if (!vecLockMtx.contains(node[0])) node[0]->mtx.lock(); else qDebug() << "FUCKA1";
+                node[0]->mtx.lock();                            // node[0]
+                not_nullptr(node[0]->r, "node[0]->r->");
+                node[0]->r->mtx.lock();                         // node[0]->r
+                not_nullptr(node[0]->l,"node[0]->l->");
+//                node[0]->l->mtx.lock();                         // node[0]->l
+                if (try_mtx_lock(node[0]->l) == false) {a1->mtx.unlock(); node[0]->mtx.unlock(); node[0]->r->mtx.unlock(); del(key); return void();} // разблокировать все мьютексы
+                if (a1 != node[0] && a1 != node[0]->r && a1 != node[0]->l)
                 {
-                    node[0]->mtx.unlock();
-                    node[0]->l->mtx.unlock();
-                    node[0]->r->mtx.unlock();
-                    not_nullptr(nodeTemp[0]);
-                    nodeTemp[0]->mtx.lock();
-                    not_nullptr(nodeTemp[1]);
-                    nodeTemp[1]->mtx.lock();
-                    if (nodeTemp[1]->l == nodeTemp[0])
-                        nodeTemp[1]->l = nullptr;
-                    if (nodeTemp[1]->r == nodeTemp[0])
-                        nodeTemp[1]->r = nullptr;
-                    nodeTemp[1]->mtx.unlock();
-                    nodeTemp[0]->mtx.unlock();
-
-                    not_nullptr(node[0]);
-                    node[0]->mtx.lock();
-                    node[0]->x = xx;
-                    node[0]->x2 = xx2;
-                    node[0]->mtx.unlock();
+                    not_nullptr(a1,"a1->");
+                    a1->mtx.lock();                             // a1
                 }
                 else
                 {
-                    qDebug() << "FUCKINDEL";
+                    qDebug() << "ERROR!!!";
+                    exit(0);
+                }
+                if (MTLx == node[0]->l->x && MTRx == node[0]->r->x && MTx == node[0]->x)
+                {
+                    bool flag = false;
+                    if (node[0]->l == nodeTemp[1] || node[0]->r == nodeTemp[1])
+                    {
+                        flag = true;
+                        qDebug() << "NORMPLAN";
+                    }
+                    else
+                    {
+                        not_nullptr(nodeTemp[1], "nodeTemp[1]");
+                        nodeTemp[1]->mtx.lock();                // nodeTemp[1]
+                    }
+//                    nodeTemp[0]->mtx.lock();                    // nodeTemp[0] незлья ведь a1 == nodeTemp[0]!!!
+                    if (a1 == nodeTemp[0] && nodeTemp[0]->x == a1x)
+                    {
+                        node[0]->x = nodeTemp[0]->x;
+                        node[0]->x2 = nodeTemp[0]->x2;
+
+                        if (nodeTemp[1]->l == nodeTemp[0])
+                            nodeTemp[1]->l = nullptr;
+                        if (nodeTemp[1]->r == nodeTemp[0])
+                            nodeTemp[1]->r = nullptr;
+
+                        if (flag == false)
+                            nodeTemp[1]->mtx.unlock();
+                        a1->mtx.unlock();
+                        node[0]->mtx.unlock();
+                        node[0]->r->mtx.unlock();
+                        node[0]->l->mtx.unlock();
+                    }
+                    else
+                    {
+                        qDebug() << "ERRORNODETEMP0"; //изменися элемент за время операций
+                        exit(0);
+                    }
+                }
+                else
+                {
+                    qDebug() << "PIZDEC";//разлочить всё и пустить по новой
                     exit(1);
                 }
-//            node[1]->mtx.unlock();
-//                del(xx);//НЕ ПУТАТЬ С delete!        // не вызывать саму себя, если не убедился что мьютексы сняты
             }
+//            esle
+//            {
+//                not_nullptr(a1);
+//                a1->mtx.lock();
+//                T xx = a1->x;
+//                T2 xx2 = a1->x2;
+//                a1->mtx.unlock();
+//                Node<T, T2> **nodeTemp = get_value_(xx, Tree, Tree);
+////                a1->mtx.lock();
+//                not_nullptr(node[0]);
+//                node[0]->mtx.lock();
+//                not_nullptr(node[0]->l);
+//                node[0]->l->mtx.lock();
+//                not_nullptr(node[0]->r);
+//                node[0]->r->mtx.lock();
+//                if (MTLx == node[0]->l->x && MTRx == node[0]->r->x)
+//                {
+//                    node[0]->mtx.unlock();
+//                    node[0]->l->mtx.unlock();
+//                    node[0]->r->mtx.unlock();
+//                    not_nullptr(nodeTemp[0]);
+//                    nodeTemp[0]->mtx.lock();
+//                    not_nullptr(nodeTemp[1]);
+//                    nodeTemp[1]->mtx.lock();
+//                    if (nodeTemp[1]->l == nodeTemp[0])
+//                        nodeTemp[1]->l = nullptr;
+//                    if (nodeTemp[1]->r == nodeTemp[0])
+//                        nodeTemp[1]->r = nullptr;
+//                    nodeTemp[1]->mtx.unlock();
+//                    nodeTemp[0]->mtx.unlock();
+
+//                    not_nullptr(node[0]);
+//                    node[0]->mtx.lock();
+//                    node[0]->x = xx;
+//                    node[0]->x2 = xx2;
+//                    node[0]->mtx.unlock();
+//                }
+//                else
+//                {
+//                    qDebug() << "FUCKINDEL";
+////                    exit(1);
+//                }
+////            node[1]->mtx.unlock();
+////                del(xx);//НЕ ПУТАТЬ С delete!        // не вызывать саму себя, если не убедился что мьютексы сняты
+//            }
 
 //            T deletedX = node[0]->x;
 //            Node<T, T2> node;
@@ -364,6 +434,7 @@ class MyMap
     }
 
     void add_node_(T x, T2 x2, Node<T, T2> *&MyTree) //Фукция добавления звена в дерево
+    //между проверкой количества детей и добавленеим ребенка не должно оставаться разблакированным элемент.
     {try{
 
         if (nullptr == MyTree)  //То, о чем я в самом начале писал. Если дерева нет, то ложим семечко
@@ -382,6 +453,10 @@ class MyMap
             }
         }
         //предпологаемое место для лока мьютекса
+        //ОБЯЗАТЕЛЬНО!!!!!!!!!!!!!!!
+        //ОБЯЗАТЕЛЬНО!!!!!!!!!!!!!!!
+        //между проверкой количества детей и добавленеим ребенка не должно оставаться разблакированным элемент.
+        //между проверкой количества детей и добавленеим ребенка не должно оставаться разблакированным элемент.
         if (x < MyTree->x)   //Если нововведенный элемент x меньше чем элемент x из семечка дерева, уходим влево
         {
             if (MyTree->l != nullptr)
@@ -539,13 +614,23 @@ class MyMap
 //        MyTree->mtx.unlock(); // ????КАКОГОХУЯ????
         return nullptr;
     }
-    not_nullptr(Node<T, T2> *&MyTree)
+    void not_nullptr(Node<T, T2> *&MyTree, QString str = "")
     {
         if (MyTree == nullptr)
         {
-            Sleep(200);
-            qDebug() << "NULLPTRNULLPTRNULLPTRNULLPTRNULLPTRNULLPTR";
-            exit(1);
+//            Sleep(200);
+            qDebug() << "NULLPTRNULLPTRNULLPTRNULLPTRNULLPTRNULLPTR" << str;
+//            exit(1);
+        }
+    }
+    bool try_mtx_lock(Node<T, T2> *&MyTree)
+    {
+        if (MyTree == nullptr)
+            return false;
+        else
+        {
+            MyTree->mtx.lock();
+            return true;
         }
     }
 };
@@ -602,7 +687,7 @@ int main()
 //    Sleep(100);
 //    obj->show();
 //    obj->show();
-    Sleep(100);
+    Sleep(200);
     cout << "---------------------------------------------";
     obj->approve();
     obj->show();
