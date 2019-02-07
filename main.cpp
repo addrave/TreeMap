@@ -268,7 +268,8 @@ class MyMap
 
             node[0]->mtx.unlock();
             qDebug() << "OBJECT WHITH 2 CHILD AND PARENT";
-            if (get_for_replace(node[0], MTLx, MTRx) == nullptr)
+            Node <T, T2> *a1 = get_for_replace(node[0], MTLx, MTRx);
+            if (a1 == nullptr)
             {
 //                qDebug() << "ATTANTION i can not replace item because can not find a replacement for it " << node[0]->x;
 //                this->show();
@@ -288,14 +289,48 @@ class MyMap
             }
             else
             {
-                Node <T, T2> *a1 = get_for_replace(node[0], MTLx, MTRx);
-                //MUTEX
+                not_nullptr(a1);
+                a1->mtx.lock();
                 T xx = a1->x;
                 T2 xx2 = a1->x2;
+                a1->mtx.unlock();
+                Node<T, T2> **nodeTemp = get_value_(xx, Tree, Tree);
+//                a1->mtx.lock();
+                not_nullptr(node[0]);
+                node[0]->mtx.lock();
+                not_nullptr(node[0]->l);
+                node[0]->l->mtx.lock();
+                not_nullptr(node[0]->r);
+                node[0]->r->mtx.lock();
+                if (MTLx == node[0]->l->x && MTRx == node[0]->r->x)
+                {
+                    node[0]->mtx.unlock();
+                    node[0]->l->mtx.unlock();
+                    node[0]->r->mtx.unlock();
+                    not_nullptr(nodeTemp[0]);
+                    nodeTemp[0]->mtx.lock();
+                    not_nullptr(nodeTemp[1]);
+                    nodeTemp[1]->mtx.lock();
+                    if (nodeTemp[1]->l == nodeTemp[0])
+                        nodeTemp[1]->l = nullptr;
+                    if (nodeTemp[1]->r == nodeTemp[0])
+                        nodeTemp[1]->r = nullptr;
+                    nodeTemp[1]->mtx.unlock();
+                    nodeTemp[0]->mtx.unlock();
+
+                    not_nullptr(node[0]);
+                    node[0]->mtx.lock();
+                    node[0]->x = xx;
+                    node[0]->x2 = xx2;
+                    node[0]->mtx.unlock();
+                }
+                else
+                {
+                    qDebug() << "FUCKINDEL";
+                    exit(1);
+                }
 //            node[1]->mtx.unlock();
-                del(xx);//НЕ ПУТАТЬ С delete!        // не вызывать саму себя, если не убедился что мьютексы сняты
-                node[0]->x = xx;
-                node[0]->x2 = xx2;
+//                del(xx);//НЕ ПУТАТЬ С delete!        // не вызывать саму себя, если не убедился что мьютексы сняты
             }
 
 //            T deletedX = node[0]->x;
@@ -508,6 +543,7 @@ class MyMap
     {
         if (MyTree == nullptr)
         {
+            Sleep(200);
             qDebug() << "NULLPTRNULLPTRNULLPTRNULLPTRNULLPTRNULLPTR";
             exit(1);
         }
@@ -540,26 +576,31 @@ int main()
 //    thread t2 (&MyMap<int,int>::add_node, obj, 1, 1);
 //    t1.join();
 //    t2.join();
-//    thread t1 (&MyMap<double,double>::del, obj, 81);
 //    Sleep(100);
 //    obj->show();
+    thread t1 (&MyMap<double,double>::del, obj, 49);
     thread t2 (&MyMap<double,double>::del, obj, 51);
-//    obj->show();
-    thread t3 (&MyMap<double,double>::del, obj, 50);
-    thread t4 (&MyMap<double,double>::show, obj);
+    thread t3 (&MyMap<double,double>::del, obj, 52);
+    thread t4 (&MyMap<double,double>::del, obj, 34);
+    thread t5 (&MyMap<double,double>::del, obj, 54);
+    thread t6 (&MyMap<double,double>::del, obj, 50);
+//    thread t7 (&MyMap<double,double>::del, obj, 50);
 //    t1.join();
 //    t2.join();
 //    t3.join();
 //    t4.join();
-//    t1.detach();
+    t1.detach();
     t2.detach();
     t3.detach();
     t4.detach();
+    t5.detach();
+    t6.detach();
+//    t7.detach();
 //    obj.Tree->l->r->r->r->l->x = 1;
 //    obj.del(81);
 //    qDebug() << obj.Tree->x;
 //    Sleep(100);
-    obj->show();
+//    obj->show();
 //    obj->show();
     Sleep(100);
     cout << "---------------------------------------------";
