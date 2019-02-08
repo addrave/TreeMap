@@ -5,6 +5,8 @@
 #include <thread>
 #include <QDebug>
 #include <windows.h>
+#include <QMutex>
+#include <QMutexLocker>
 //стереть все делиты нахуй!!!!!!!!!!!!!!!!!!!! чтобы они не удаляли объекты в которые уже открыты на чтение в других тредах
 //нельзя блокирывать мьютексы потенциально НУЛЬПТРные
 // не так страшно обращаться к полям удаленного объекта, как страшно юзать мьютекс удаленного объекта
@@ -18,7 +20,8 @@ class Node //Звено дерева
     T2 x2;      //val
     Node<T, T2> *l, *r;
     int deth = 0;
-    mutex mtx;
+    QMutex mtx;
+    Node() : mtx(QMutex::Recursive) {}
 };
 
 template <class T, class T2>
@@ -232,8 +235,8 @@ class MyMap
                 node[1]->l = nullptr;
             if (node[1]->r == node[0])
                 node[1]->r = nullptr;
-            node[0]->mtx.unlock();
-            node[1]->mtx.unlock();
+//            node[0]->mtx.unlock(); //ВАЖНО!
+//            node[1]->mtx.unlock();
 //            delete node[0];
 //            node[0] = nullptr;
             unlock_all(vL);
@@ -246,8 +249,8 @@ class MyMap
                 node[1]->l = node[0]->r;
             if (node[1]->r == node[0])
                 node[1]->r = node[0]->r;
-            node[0]->mtx.unlock();
-            node[1]->mtx.unlock();
+//            node[0]->mtx.unlock();
+//            node[1]->mtx.unlock();
 //            delete node[0];
 //            node[0] = nullptr;
             unlock_all(vL);
@@ -260,243 +263,243 @@ class MyMap
                 node[1]->l = node[0]->l;
             if (node[1]->r == node[0])
                 node[1]->r = node[0]->l;
-            node[0]->mtx.unlock();
-            node[1]->mtx.unlock();
+//            node[0]->mtx.unlock();
+//            node[1]->mtx.unlock();
 //            delete node[0];
 //            node[0] = nullptr;
             unlock_all(vL);
             return void();
         }
-        if (node[0]->l != nullptr && node[0]->r != nullptr && node[0] != node[1])
-        {
-//            node[1]->mtx.unlock();
-            tun(node[1],vL);
+        if (node[0]->l != nullptr && node[0]->r != nullptr && node[0] != node[1]){qDebug() << node[0]->x << node[1]->x; unlock_all(vL);return void();}
+//        {
+////            node[1]->mtx.unlock();
+//            tun(node[1],vL);
 
-//            not_nullptr(node[0]->l);
-//            node[0]->l->mtx.lock();
-            if (!tl(node[0]->l,vL)) {unlock_all(vL); del(key); return void();}
-//            not_nullptr(node[0]->r);
-//            node[0]->r->mtx.lock();
-            if (!tl(node[0]->r,vL)) {unlock_all(vL); del(key); return void();}
-            T MTLx = node[0]->l->x;
-            T MTRx = node[0]->r->x;
-            T MTx = node[0]->x;
-//            node[0]->l->mtx.unlock();
-            tun(node[0]->l, vL);
-//            node[0]->r->mtx.unlock();
-            tun(node[0]->r, vL);
-//            node[0]->mtx.unlock();
-            tun(node[0], vL);
-//            qDebug() << "OBJECT WHITH 2 CHILD AND PARENT";
-            qDebug() << vL.size() << " = MUST BE NULL";
-            Node <T, T2> *a1 = get_for_replace(node[0], MTLx, MTRx);
-            if (a1 == nullptr)
-            {
-//                qDebug() << "ATTANTION i can not replace item because can not find a replacement for it " << node[0]->x;
-//                this->show();
-//                exit(0);
-                //а вот здесь мы будем проверять не изменились ли данные за время выполнения get_for_replace. проверять что они до сих пор валидны
-                // блокировать node[1]
-//                not_nullptr(node[1], "node[1]");
-//                node[1]->mtx.lock();
-                if (!tl(node[1], vL)) {unlock_all(vL); del(key); return void();}
-//                not_nullptr(node[0], "node[0]");
-//                node[0]->mtx.lock();
-                if (!tl(node[0], vL)) {unlock_all(vL); del(key); return void();}
-//                not_nullptr(node[0]->l, "node[0]->l");
-//                node[0]->l->mtx.lock();
-                if (!tl(node[0]->l, vL)) {unlock_all(vL); del(key); return void();}
-//                not_nullptr(node[0]->r, "node[0]->r");
-//                node[0]->r->mtx.lock();
-                if (!tl(node[0]->r, vL)) {unlock_all(vL); del(key); return void();}
-                //MUTEX
-                if (node[1]->l != node[0] && node[1]->r != node[0]) // ВАЖНЫЕ ПРОВЕРКИ
-                    {unlock_all(vL); del(key); return void();
-                    qDebug() << "OCHEN HUEVO OBRATY VNIMANIE fix";}
-                if (node[0]->x != key)                              // ВАЖНЫЕ ПРОВЕРКИ
-                    {unlock_all(vL); del(key); return void();
-                    qDebug() << "OCHEN HUEVO OBRATY VNIMANIE fix";}
-                if (MTLx != node[0]->l->x || MTRx != node[0]->r->x || MTx != node[0]->x)     // ВАЖНЫЕ ПРОВЕРКИ
-                    {unlock_all(vL); del(key); return void();
-                    qDebug() << "OCHEN HUEVO OBRATY VNIMANIE fix";}
-                node[0]->r->l = node[0]->l;
-                if (node[1]->l == node[0])
-                    node[1]->l = node[0]->r;
-                if (node[1]->r == node[0])
-                    node[1]->r = node[0]->r;
-
-//                node[1]->mtx.unlock();
-                tun(node[1], vL);
-//                node[0]->mtx.lock();
-                if (!tl(node[0], vL)) {unlock_all(vL); del(key); return void();}
-//                node[0]->l->mtx.lock();
-                if (!tl(node[0]->l, vL)) {unlock_all(vL); del(key); return void();}
-//                node[0]->r->mtx.lock();
-                if (!tl(node[0]->r, vL)) {unlock_all(vL); del(key); return void();}
-            }
-            else
-            {
-//                not_nullptr(a1,"a1");
-//                a1->mtx.lock();
-                if (!tl(a1, vL)) {unlock_all(vL); del(key); return void();}
-//                if (!vecLockMtx.contains(a1)) {a1->mtx.lock(); vecLockMtx.push_back(a1);} else qDebug() << "FUCKA1";
-                T a1x = a1->x;
-//                a1->mtx.unlock();// ТАК ЧТО ПРОВЕРИТЬ ЕГО ПОДЛИННОСТЬ!!!!!
-                tun(a1, vL);
-                qDebug() << vL.size() << " = MUST BE NULL";
-                Node<T, T2> **nodeTemp = get_value_(a1x, Tree, Tree); // ЭТО ВСЕГО ЛИШЬ ПРЕДПОЛОЖЕНИЕ. ПРОВЕРАЙ ПОЛУЧЕННЫЕ ДАННЫЕ
-/*                not_nullptr(node[0], "node[0]->");
-//                if (!vecLockMtx.contains(node[0])) node[0]->mtx.lock(); else qDebug() << "FUCKA1";
-                node[0]->mtx.lock();*/                            // node[0]
-                if (!tl(node[0], vL)) {unlock_all(vL); del(key); return void();}
-/*                not_nullptr(node[0]->r, "node[0]->r->");
-                node[0]->r->mtx.lock();  */                       // node[0]->r
-                if (!tl(node[0]->r, vL)) {unlock_all(vL); del(key); return void();}
-/*                not_nullptr(node[0]->l,"node[0]->l->");
-                node[0]->l->mtx.lock();  */                       // node[0]->l
-                if (!tl(node[0]->l, vL)) {unlock_all(vL); del(key); return void();}
-//                if (try_mtx_lock(node[0]->l) == false) {a1->mtx.unlock(); node[0]->mtx.unlock(); node[0]->r->mtx.unlock(); del(key); return void();} // разблокировать все мьютексы
-                if (a1 != node[0] && a1 != node[0]->r && a1 != node[0]->l)
-                {
-//                    not_nullptr(a1,"a1->");
-//                    a1->mtx.lock();                             // a1
-                    if (!tl(a1, vL)) {unlock_all(vL); del(key); return void();}
-                }
-                else
-                {unlock_all(vL); del(key); return void();
-                    qDebug() << "ERROR!!!";
-                    exit(0);
-                }
-
-
-                if (node[1]->l != node[0] && node[1]->r != node[0]) // ВАЖНЫЕ ПРОВЕРКИ
-                    {unlock_all(vL); del(key); return void();
-                    qDebug() << "OCHEN HUEVO OBRATY VNIMANIE fix";}
-                if (node[0]->x != key)                              // ВАЖНЫЕ ПРОВЕРКИ
-                    {unlock_all(vL); del(key); return void();
-                    qDebug() << "OCHEN HUEVO OBRATY VNIMANIE fix";}
-                if (MTLx != node[0]->l->x || MTRx != node[0]->r->x || MTx != node[0]->x)     // ВАЖНЫЕ ПРОВЕРКИ
-                    {unlock_all(vL); del(key); return void();
-                    qDebug() << "OCHEN HUEVO OBRATY VNIMANIE fix";}
-                if (a1 != nodeTemp[0] || nodeTemp[0]->x != a1x)
-                    {unlock_all(vL); del(key); return void();
-                    qDebug() << "OCHEN HUEVO OBRATY VNIMANIE fix";}
-
-                if (MTLx == node[0]->l->x && MTRx == node[0]->r->x && MTx == node[0]->x)
-                {
-                    bool flag = false;
-                    if (node[0]->l == nodeTemp[1] || node[0]->r == nodeTemp[1])
-                    {
-                        flag = true;
-                        qDebug() << "NORMPLAN";
-                    }
-                    else
-                    {
-//                        not_nullptr(nodeTemp[1], "nodeTemp[1]");
-//                        nodeTemp[1]->mtx.lock();                // nodeTemp[1]
-                        if (!tl(nodeTemp[1], vL)) {unlock_all(vL); del(key); return void();}
-                    }
-//                    nodeTemp[0]->mtx.lock();                    // nodeTemp[0] незлья ведь a1 == nodeTemp[0]!!!
-                    if (a1 == nodeTemp[0] && nodeTemp[0]->x == a1x)
-                    {
-                        node[0]->x = nodeTemp[0]->x;
-                        node[0]->x2 = nodeTemp[0]->x2;
-
-                        if (nodeTemp[1]->l == nodeTemp[0])
-                            nodeTemp[1]->l = nullptr;
-                        if (nodeTemp[1]->r == nodeTemp[0])
-                            nodeTemp[1]->r = nullptr;
-
-                        if (flag == false)
-                        {
-//                            nodeTemp[1]->mtx.unlock();
-                            tun(nodeTemp[1], vL);
-                        }
-//                        a1->mtx.unlock();
-                        tun(a1, vL);
-//                        node[0]->mtx.unlock();
-                        tun(node[0], vL);
-//                        node[0]->r->mtx.unlock();
-                        tun(node[0]->r, vL);
-//                        node[0]->l->mtx.unlock();
-                        tun(node[0]->l, vL);
-                    }
-                    else
-                    {unlock_all(vL); del(key); return void();
-                        qDebug() << "ERRORNODETEMP0"; //изменися элемент за время операций
-                        exit(0);
-                    }
-                }
-                else
-                {unlock_all(vL); del(key); return void();
-                    qDebug() << "PIZDEC";//разлочить всё и пустить по новой
-                    exit(1);
-                }
-            }
-//            esle
+////            not_nullptr(node[0]->l);
+////            node[0]->l->mtx.lock();
+//            if (!tl(node[0]->l,vL)) {unlock_all(vL); del(key); return void();}
+////            not_nullptr(node[0]->r);
+////            node[0]->r->mtx.lock();
+//            if (!tl(node[0]->r,vL)) {unlock_all(vL); del(key); return void();}
+//            T MTLx = node[0]->l->x;
+//            T MTRx = node[0]->r->x;
+//            T MTx = node[0]->x;
+////            node[0]->l->mtx.unlock();
+//            tun(node[0]->l, vL);
+////            node[0]->r->mtx.unlock();
+//            tun(node[0]->r, vL);
+////            node[0]->mtx.unlock();
+//            tun(node[0], vL);
+////            qDebug() << "OBJECT WHITH 2 CHILD AND PARENT";
+//            qDebug() << vL.size() << " = MUST BE NULL";
+//            Node <T, T2> *a1 = get_for_replace(node[0], MTLx, MTRx);
+//            if (a1 == nullptr)
 //            {
-//                not_nullptr(a1);
-//                a1->mtx.lock();
-//                T xx = a1->x;
-//                T2 xx2 = a1->x2;
-//                a1->mtx.unlock();
-//                Node<T, T2> **nodeTemp = get_value_(xx, Tree, Tree);
-////                a1->mtx.lock();
-//                not_nullptr(node[0]);
-//                node[0]->mtx.lock();
-//                not_nullptr(node[0]->l);
-//                node[0]->l->mtx.lock();
-//                not_nullptr(node[0]->r);
-//                node[0]->r->mtx.lock();
-//                if (MTLx == node[0]->l->x && MTRx == node[0]->r->x)
-//                {
-//                    node[0]->mtx.unlock();
-//                    node[0]->l->mtx.unlock();
-//                    node[0]->r->mtx.unlock();
-//                    not_nullptr(nodeTemp[0]);
-//                    nodeTemp[0]->mtx.lock();
-//                    not_nullptr(nodeTemp[1]);
-//                    nodeTemp[1]->mtx.lock();
-//                    if (nodeTemp[1]->l == nodeTemp[0])
-//                        nodeTemp[1]->l = nullptr;
-//                    if (nodeTemp[1]->r == nodeTemp[0])
-//                        nodeTemp[1]->r = nullptr;
-//                    nodeTemp[1]->mtx.unlock();
-//                    nodeTemp[0]->mtx.unlock();
+////                qDebug() << "ATTANTION i can not replace item because can not find a replacement for it " << node[0]->x;
+////                this->show();
+////                exit(0);
+//                //а вот здесь мы будем проверять не изменились ли данные за время выполнения get_for_replace. проверять что они до сих пор валидны
+//                // блокировать node[1]
+////                not_nullptr(node[1], "node[1]");
+////                node[1]->mtx.lock();
+//                if (!tl(node[1], vL)) {unlock_all(vL); del(key); return void();}
+////                not_nullptr(node[0], "node[0]");
+////                node[0]->mtx.lock();
+//                if (!tl(node[0], vL)) {unlock_all(vL); del(key); return void();}
+////                not_nullptr(node[0]->l, "node[0]->l");
+////                node[0]->l->mtx.lock();
+//                if (!tl(node[0]->l, vL)) {unlock_all(vL); del(key); return void();}
+////                not_nullptr(node[0]->r, "node[0]->r");
+////                node[0]->r->mtx.lock();
+//                if (!tl(node[0]->r, vL)) {unlock_all(vL); del(key); return void();}
+//                //MUTEX
+//                if (node[1]->l != node[0] && node[1]->r != node[0]) // ВАЖНЫЕ ПРОВЕРКИ
+//                    {unlock_all(vL); del(key); return void();
+//                    qDebug() << "OCHEN HUEVO OBRATY VNIMANIE fix";}
+//                if (node[0]->x != key)                              // ВАЖНЫЕ ПРОВЕРКИ
+//                    {unlock_all(vL); del(key); return void();
+//                    qDebug() << "OCHEN HUEVO OBRATY VNIMANIE fix";}
+//                if (MTLx != node[0]->l->x || MTRx != node[0]->r->x || MTx != node[0]->x)     // ВАЖНЫЕ ПРОВЕРКИ
+//                    {unlock_all(vL); del(key); return void();
+//                    qDebug() << "OCHEN HUEVO OBRATY VNIMANIE fix";}
+//                node[0]->r->l = node[0]->l;
+//                if (node[1]->l == node[0])
+//                    node[1]->l = node[0]->r;
+//                if (node[1]->r == node[0])
+//                    node[1]->r = node[0]->r;
 
-//                    not_nullptr(node[0]);
-//                    node[0]->mtx.lock();
-//                    node[0]->x = xx;
-//                    node[0]->x2 = xx2;
-//                    node[0]->mtx.unlock();
+////                node[1]->mtx.unlock();
+//                tun(node[1], vL);
+////                node[0]->mtx.lock();
+//                if (!tl(node[0], vL)) {unlock_all(vL); del(key); return void();}
+////                node[0]->l->mtx.lock();
+//                if (!tl(node[0]->l, vL)) {unlock_all(vL); del(key); return void();}
+////                node[0]->r->mtx.lock();
+//                if (!tl(node[0]->r, vL)) {unlock_all(vL); del(key); return void();}
+//            }
+//            else
+//            {
+////                not_nullptr(a1,"a1");
+////                a1->mtx.lock();
+//                if (!tl(a1, vL)) {unlock_all(vL); del(key); return void();}
+////                if (!vecLockMtx.contains(a1)) {a1->mtx.lock(); vecLockMtx.push_back(a1);} else qDebug() << "FUCKA1";
+//                T a1x = a1->x;
+////                a1->mtx.unlock();// ТАК ЧТО ПРОВЕРИТЬ ЕГО ПОДЛИННОСТЬ!!!!!
+//                tun(a1, vL);
+//                qDebug() << vL.size() << " = MUST BE NULL";
+//                Node<T, T2> **nodeTemp = get_value_(a1x, Tree, Tree); // ЭТО ВСЕГО ЛИШЬ ПРЕДПОЛОЖЕНИЕ. ПРОВЕРАЙ ПОЛУЧЕННЫЕ ДАННЫЕ
+///*                not_nullptr(node[0], "node[0]->");
+////                if (!vecLockMtx.contains(node[0])) node[0]->mtx.lock(); else qDebug() << "FUCKA1";
+//                node[0]->mtx.lock();*/                            // node[0]
+//                if (!tl(node[0], vL)) {unlock_all(vL); del(key); return void();}
+///*                not_nullptr(node[0]->r, "node[0]->r->");
+//                node[0]->r->mtx.lock();  */                       // node[0]->r
+//                if (!tl(node[0]->r, vL)) {unlock_all(vL); del(key); return void();}
+///*                not_nullptr(node[0]->l,"node[0]->l->");
+//                node[0]->l->mtx.lock();  */                       // node[0]->l
+//                if (!tl(node[0]->l, vL)) {unlock_all(vL); del(key); return void();}
+////                if (try_mtx_lock(node[0]->l) == false) {a1->mtx.unlock(); node[0]->mtx.unlock(); node[0]->r->mtx.unlock(); del(key); return void();} // разблокировать все мьютексы
+//                if (a1 != node[0] && a1 != node[0]->r && a1 != node[0]->l)
+//                {
+////                    not_nullptr(a1,"a1->");
+////                    a1->mtx.lock();                             // a1
+//                    if (!tl(a1, vL)) {unlock_all(vL); del(key); return void();}
 //                }
 //                else
-//                {
-//                    qDebug() << "FUCKINDEL";
-////                    exit(1);
-//                }
-////            node[1]->mtx.unlock();
-////                del(xx);//НЕ ПУТАТЬ С delete!        // не вызывать саму себя, если не убедился что мьютексы сняты
-//            }
-
-//            T deletedX = node[0]->x;
-//            Node<T, T2> node;
-//            while (node.)
-//            {
-
-//            }
-//            if (vL.size() != 0)
-//            {
-//                for (int i = 0; i < vL.size(); i++)
-//                {
-//                    qDebug() << "HUEVO = " <<  vL.at(i)->x;
-//                    vL.at(i)->mtx.unlock();
+//                {unlock_all(vL); del(key); return void();
+//                    qDebug() << "ERROR!!!";
+//                    exit(0);
 //                }
 
+
+//                if (node[1]->l != node[0] && node[1]->r != node[0]) // ВАЖНЫЕ ПРОВЕРКИ
+//                    {unlock_all(vL); del(key); return void();
+//                    qDebug() << "OCHEN HUEVO OBRATY VNIMANIE fix";}
+//                if (node[0]->x != key)                              // ВАЖНЫЕ ПРОВЕРКИ
+//                    {unlock_all(vL); del(key); return void();
+//                    qDebug() << "OCHEN HUEVO OBRATY VNIMANIE fix";}
+//                if (MTLx != node[0]->l->x || MTRx != node[0]->r->x || MTx != node[0]->x)     // ВАЖНЫЕ ПРОВЕРКИ
+//                    {unlock_all(vL); del(key); return void();
+//                    qDebug() << "OCHEN HUEVO OBRATY VNIMANIE fix";}
+//                if (a1 != nodeTemp[0] || nodeTemp[0]->x != a1x)
+//                    {unlock_all(vL); del(key); return void();
+//                    qDebug() << "OCHEN HUEVO OBRATY VNIMANIE fix";}
+
+//                if (MTLx == node[0]->l->x && MTRx == node[0]->r->x && MTx == node[0]->x)
+//                {
+//                    bool flag = false;
+//                    if (node[0]->l == nodeTemp[1] || node[0]->r == nodeTemp[1])
+//                    {
+//                        flag = true;
+//                        qDebug() << "NORMPLAN";
+//                    }
+//                    else
+//                    {
+////                        not_nullptr(nodeTemp[1], "nodeTemp[1]");
+////                        nodeTemp[1]->mtx.lock();                // nodeTemp[1]
+//                        if (!tl(nodeTemp[1], vL)) {unlock_all(vL); del(key); return void();}
+//                    }
+////                    nodeTemp[0]->mtx.lock();                    // nodeTemp[0] незлья ведь a1 == nodeTemp[0]!!!
+//                    if (a1 == nodeTemp[0] && nodeTemp[0]->x == a1x)
+//                    {
+//                        node[0]->x = nodeTemp[0]->x;
+//                        node[0]->x2 = nodeTemp[0]->x2;
+
+//                        if (nodeTemp[1]->l == nodeTemp[0])
+//                            nodeTemp[1]->l = nullptr;
+//                        if (nodeTemp[1]->r == nodeTemp[0])
+//                            nodeTemp[1]->r = nullptr;
+
+//                        if (flag == false)
+//                        {
+////                            nodeTemp[1]->mtx.unlock();
+//                            tun(nodeTemp[1], vL);
+//                        }
+////                        a1->mtx.unlock();
+//                        tun(a1, vL);
+////                        node[0]->mtx.unlock();
+//                        tun(node[0], vL);
+////                        node[0]->r->mtx.unlock();
+//                        tun(node[0]->r, vL);
+////                        node[0]->l->mtx.unlock();
+//                        tun(node[0]->l, vL);
+//                    }
+//                    else
+//                    {unlock_all(vL); del(key); return void();
+//                        qDebug() << "ERRORNODETEMP0"; //изменися элемент за время операций
+//                        exit(0);
+//                    }
+//                }
+//                else
+//                {unlock_all(vL); del(key); return void();
+//                    qDebug() << "PIZDEC";//разлочить всё и пустить по новой
+//                    exit(1);
+//                }
 //            }
-            unlock_all(vL); del(key); return void();
-            return void();
-        }
+////            esle
+////            {
+////                not_nullptr(a1);
+////                a1->mtx.lock();
+////                T xx = a1->x;
+////                T2 xx2 = a1->x2;
+////                a1->mtx.unlock();
+////                Node<T, T2> **nodeTemp = get_value_(xx, Tree, Tree);
+//////                a1->mtx.lock();
+////                not_nullptr(node[0]);
+////                node[0]->mtx.lock();
+////                not_nullptr(node[0]->l);
+////                node[0]->l->mtx.lock();
+////                not_nullptr(node[0]->r);
+////                node[0]->r->mtx.lock();
+////                if (MTLx == node[0]->l->x && MTRx == node[0]->r->x)
+////                {
+////                    node[0]->mtx.unlock();
+////                    node[0]->l->mtx.unlock();
+////                    node[0]->r->mtx.unlock();
+////                    not_nullptr(nodeTemp[0]);
+////                    nodeTemp[0]->mtx.lock();
+////                    not_nullptr(nodeTemp[1]);
+////                    nodeTemp[1]->mtx.lock();
+////                    if (nodeTemp[1]->l == nodeTemp[0])
+////                        nodeTemp[1]->l = nullptr;
+////                    if (nodeTemp[1]->r == nodeTemp[0])
+////                        nodeTemp[1]->r = nullptr;
+////                    nodeTemp[1]->mtx.unlock();
+////                    nodeTemp[0]->mtx.unlock();
+
+////                    not_nullptr(node[0]);
+////                    node[0]->mtx.lock();
+////                    node[0]->x = xx;
+////                    node[0]->x2 = xx2;
+////                    node[0]->mtx.unlock();
+////                }
+////                else
+////                {
+////                    qDebug() << "FUCKINDEL";
+//////                    exit(1);
+////                }
+//////            node[1]->mtx.unlock();
+//////                del(xx);//НЕ ПУТАТЬ С delete!        // не вызывать саму себя, если не убедился что мьютексы сняты
+////            }
+
+////            T deletedX = node[0]->x;
+////            Node<T, T2> node;
+////            while (node.)
+////            {
+
+////            }
+////            if (vL.size() != 0)
+////            {
+////                for (int i = 0; i < vL.size(); i++)
+////                {
+////                    qDebug() << "HUEVO = " <<  vL.at(i)->x;
+////                    vL.at(i)->mtx.unlock();
+////                }
+
+////            }
+//            unlock_all(vL); del(key); return void();
+//            return void();
+//        }
         unlock_all(vL); del(key); return void();
         qDebug() << "VERY BAD";
         node[0]->mtx.unlock();
@@ -549,9 +552,9 @@ class MyMap
                 tempNode->x = x; //Записываем в левое подзвено записываемый элемент
                 tempNode->x2 = x2;
                 tempNode->deth = 0;
-                MyTree->mtx.lock();
+//                MyTree->mtx.lock();
                 MyTree->l = tempNode;
-                MyTree->mtx.unlock();
+//                MyTree->mtx.unlock();
             }
         }
 
@@ -567,9 +570,9 @@ class MyMap
                 tempNode->x2 = x2;
                 tempNode->deth = 0;
 //                lock_guard<mutex> lock (MyTree->mtx);
-                MyTree->mtx.lock();
+//                MyTree->mtx.lock();
                 MyTree->r = tempNode;
-                MyTree->mtx.unlock();
+//                MyTree->mtx.unlock();
             }
         }
         }catch (...) {
@@ -605,8 +608,12 @@ class MyMap
     Node<T, T2>** get_value_(T key, Node<T, T2> *&MyTree, Node<T, T2> *&ParentTree)
     {try{
             //        cout << MyTree->x << "aa";
+//            MyTree->mtx(QMutex::Recursive);
+            QMutexLocker locker(&MyTree->mtx);
             if (MyTree != nullptr)
-                MyTree->mtx.lock();
+            {;
+//                MyTree->mtx.lock();
+            }
             else {
                 qDebug() << "ATTENTION!!!!!!!!!!!!!!!!get_value_";
                 exit(1);
@@ -617,14 +624,14 @@ class MyMap
                 Node<T, T2> **temp = new Node<T, T2>* [2] {nullptr, nullptr}; // первый эдемент с нужным ключем второй элемент родитель данного
                 temp[0] = MyTree;
                 temp[1] = ParentTree;
-                MyTree->mtx.unlock();
+//                MyTree->mtx.unlock();
                 return temp;
             }
             else
             {
                 Node<T, T2> *tempL = MyTree->l;
                 Node<T, T2> *tempR = MyTree->r;
-                MyTree->mtx.unlock();
+//                MyTree->mtx.unlock();
                 if (tempL != nullptr && get_value_(key, tempL, MyTree) != nullptr)
                 {
                     return get_value_(key, tempL, MyTree);
@@ -648,11 +655,14 @@ class MyMap
             // ЗАБЛАКИРУЙ, СОЗДАЙ КОПИЮ. РАЗБЛАКИРУЙ, РАБОТАЙ С КОПИЕЙ. ЧТО ЗА ХУЕТУ ГОРОДИТЬ ТО
             // ЗАБЛАКИРУЙ, СОЗДАЙ КОПИЮ. РАЗБЛАКИРУЙ, РАБОТАЙ С КОПИЕЙ. ЧТО ЗА ХУЕТУ ГОРОДИТЬ ТО
             // в функции del проверять что за время get_for_replace переданный node объект не был изменен
-    Node<T, T2>* get_for_replace(Node<T, T2> *&MyTree, T &Lx, T &Rx)  // copyMyTree ссылка.
+    Node<T, T2>* get_for_replace(Node<T, T2> *&MyTree, T Lx, T Rx)  // copyMyTree ссылка.
     {                                                                                   // если объект заменится
 //        MyTree->mtx.lock();                                                             // изменится ссылка
+        QMutexLocker locker(&MyTree->mtx);
         if (MyTree != nullptr)
-            MyTree->mtx.lock();
+        {;
+//            MyTree->mtx.lock();
+        }
         else {
             qDebug() << "ATTENTION!!!!!!!!!!!!!!!!get_for_replace";
             exit(1);
@@ -660,7 +670,7 @@ class MyMap
         T MTx = MyTree->x;                                                               // в родительском элементе
         if (MyTree->l == nullptr && MyTree->r == nullptr)                               // может передавать ссылку
         {                                                                              // на родителя???????????
-            MyTree->mtx.unlock();
+//            MyTree->mtx.unlock();
 
 
             if (MTx > Lx && MTx < Rx) // нахуя вот эта ебля с постоянными блокировками разблакировками если можно в параметрах к функции передать конкретно значения боль/меньше которых мы жолжны найти
@@ -676,7 +686,7 @@ class MyMap
         {
             Node<T, T2> *tR = MyTree->r;
             Node<T, T2> *tL = MyTree->l;
-            MyTree->mtx.unlock();
+//            MyTree->mtx.unlock();
             Node<T, T2> *resR = nullptr;
             Node<T, T2> *resL = nullptr;
             if (tR != nullptr)
@@ -759,13 +769,19 @@ class MyMap
 
         }
     }
-//    void test()
-//    {
-//        T a = 49; T b = 94;
-//        qDebug() << get_for_replace(Tree, a, b)->x;
-//        qDebug() << get_value_(49, Tree, Tree)[0]->x << get_value_(49, Tree, Tree)[1]->x;
-//        qDebug() << "norm";
-//    }
+    void test()
+    {
+        T a = 49; T b = 94;
+//        Tree->mtx.lock();
+//        Tree = nullptr;
+        QMutexLocker locker(&Tree->mtx);
+        Node <T, T2> * temp = Tree;
+//        Tree->mtx.unlock();
+        locker.unlock();
+        Node <T, T2> * temp1 = get_for_replace(temp, a, b);
+        Node <T, T2> * temp2 = get_value_(49, temp, temp)[0];
+        qDebug() << "norm";
+    }
 };
 
 int main()
@@ -794,14 +810,14 @@ int main()
 //    thread t2 (&MyMap<int,int>::add_node, obj, 1, 1);
 //    t1.join();
 //    t2.join();
-    Sleep(100);
-    obj->show();
-    thread t1 (&MyMap<int,double>::del, obj, 49);
-    thread t2 (&MyMap<int,double>::del, obj, 51);
-    thread t3 (&MyMap<int,double>::del, obj, 52);
-    thread t4 (&MyMap<int,double>::del, obj, 34);
-    thread t5 (&MyMap<int,double>::del, obj, 54);
-    thread t6 (&MyMap<int,double>::del, obj, 50);
+    Sleep(50);
+//    obj->show();
+    thread t1 (&MyMap<int,double>::test, obj);
+    thread t2 (&MyMap<int,double>::test, obj);
+    thread t3 (&MyMap<int,double>::test, obj);
+    thread t4 (&MyMap<int,double>::test, obj);
+    thread t5 (&MyMap<int,double>::test, obj);
+    thread t6 (&MyMap<int,double>::test, obj);
 //    thread t7 (&MyMap<int,double>::del, obj, 50);
 //    t1.join();
 //    t2.join();
@@ -820,9 +836,9 @@ int main()
 //    Sleep(100);
 //    obj->show();
 //    obj->show();
-    Sleep(500);
+    Sleep(50);
     cout << "---------------------------------------------";
-    obj->approve();
+//    obj->approve();
     obj->show();
 
 //    cout << ("11kkj0" < "1kkj0") ? true : false;
