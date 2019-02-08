@@ -213,6 +213,10 @@ class MyMap
         not_nullptr(node[1]);
         node[0]->mtx.lock();
         node[1]->mtx.lock();
+        if (node[1]->l != node[0] && node[1]->r != node[0]) // ВАЖНЫЕ ПРОВЕРКИ
+            qDebug() << "OCHEN HUEVO OBRATY VNIMANIE";
+        if (node[0]->x == key)                              // ВАЖНЫЕ ПРОВЕРКИ
+            qDebug() << "OCHEN HUEVO OBRATY VNIMANIE";
 //        qDebug() << '\n' << node[0]->x << '\t' << node[1]->x << '\t';
         if (node[0]->l == nullptr && node[0]->r == nullptr)
         {
@@ -277,9 +281,21 @@ class MyMap
 //                exit(0);
                 //а вот здесь мы будем проверять не изменились ли данные за время выполнения get_for_replace. проверять что они до сих пор валидны
                 // блокировать node[1]
-                not_nullptr(node[1]);
+                not_nullptr(node[1], "node[1]");
                 node[1]->mtx.lock();
+                not_nullptr(node[0], "node[0]");
+                node[0]->mtx.lock();
+                not_nullptr(node[0]->l, "node[0]->l");
+                node[0]->l->mtx.lock();
+                not_nullptr(node[0]->r, "node[0]->r");
+                node[0]->r->mtx.lock();
                 //MUTEX
+                if (node[1]->l != node[0] && node[1]->r != node[0]) // ВАЖНЫЕ ПРОВЕРКИ
+                    qDebug() << "OCHEN HUEVO OBRATY VNIMANIE";
+                if (node[0]->x != key)                              // ВАЖНЫЕ ПРОВЕРКИ
+                    qDebug() << "OCHEN HUEVO OBRATY VNIMANIE";
+                if (MTLx != node[0]->l->x || MTRx != node[0]->r->x || MTx != node[0]->x)     // ВАЖНЫЕ ПРОВЕРКИ
+                    qDebug() << "OCHEN HUEVO OBRATY VNIMANIE";
                 node[0]->r->l = node[0]->l;
                 if (node[1]->l == node[0])
                     node[1]->l = node[0]->r;
@@ -287,23 +303,27 @@ class MyMap
                     node[1]->r = node[0]->r;
 
                 node[1]->mtx.unlock();
+                node[0]->mtx.lock();
+                node[0]->l->mtx.lock();
+                node[0]->r->mtx.lock();
             }
             else
-            {   QVector <Node<T,T2>*> vecLockMtx;
+            {
+                QVector <Node<T,T2>*> vecLockMtx;
                 not_nullptr(a1,"a1");
-                a1->mtx.lock();                                 // a1
+                a1->mtx.lock();
 //                if (!vecLockMtx.contains(a1)) {a1->mtx.lock(); vecLockMtx.push_back(a1);} else qDebug() << "FUCKA1";
                 T a1x = a1->x;
                 a1->mtx.unlock();// ТАК ЧТО ПРОВЕРИТЬ ЕГО ПОДЛИННОСТЬ!!!!!
-                Node<T, T2> **nodeTemp = get_value_(a1x, Tree, Tree);
+                Node<T, T2> **nodeTemp = get_value_(a1x, Tree, Tree); // ЭТО ВСЕГО ЛИШЬ ПРЕДПОЛОЖЕНИЕ. ПРОВЕРАЙ ПОЛУЧЕННЫЕ ДАННЫЕ
                 not_nullptr(node[0], "node[0]->");
 //                if (!vecLockMtx.contains(node[0])) node[0]->mtx.lock(); else qDebug() << "FUCKA1";
                 node[0]->mtx.lock();                            // node[0]
                 not_nullptr(node[0]->r, "node[0]->r->");
                 node[0]->r->mtx.lock();                         // node[0]->r
                 not_nullptr(node[0]->l,"node[0]->l->");
-//                node[0]->l->mtx.lock();                         // node[0]->l
-                if (try_mtx_lock(node[0]->l) == false) {a1->mtx.unlock(); node[0]->mtx.unlock(); node[0]->r->mtx.unlock(); del(key); return void();} // разблокировать все мьютексы
+                node[0]->l->mtx.lock();                         // node[0]->l
+//                if (try_mtx_lock(node[0]->l) == false) {a1->mtx.unlock(); node[0]->mtx.unlock(); node[0]->r->mtx.unlock(); del(key); return void();} // разблокировать все мьютексы
                 if (a1 != node[0] && a1 != node[0]->r && a1 != node[0]->l)
                 {
                     not_nullptr(a1,"a1->");
@@ -314,6 +334,17 @@ class MyMap
                     qDebug() << "ERROR!!!";
                     exit(0);
                 }
+
+
+                if (node[1]->l != node[0] && node[1]->r != node[0]) // ВАЖНЫЕ ПРОВЕРКИ
+                    qDebug() << "OCHEN HUEVO OBRATY VNIMANIE";
+                if (node[0]->x != key)                              // ВАЖНЫЕ ПРОВЕРКИ
+                    qDebug() << "OCHEN HUEVO OBRATY VNIMANIE";
+                if (MTLx != node[0]->l->x || MTRx != node[0]->r->x || MTx != node[0]->x)     // ВАЖНЫЕ ПРОВЕРКИ
+                    qDebug() << "OCHEN HUEVO OBRATY VNIMANIE";
+                if (a1 != nodeTemp[0] || nodeTemp[0]->x != a1x)
+                    qDebug() << "OCHEN HUEVO OBRATY VNIMANIE";
+
                 if (MTLx == node[0]->l->x && MTRx == node[0]->r->x && MTx == node[0]->x)
                 {
                     bool flag = false;
@@ -418,6 +449,7 @@ class MyMap
 //            delete Tree; //Убиваем конечный элемент дерева
 //            Tree = nullptr; //Может и не обязательно, но плохого не будет
 //        }
+        qDebug() << "VERY BAD";
         node[0]->mtx.unlock();
         node[1]->mtx.unlock();
         }catch (...) {
@@ -584,7 +616,7 @@ class MyMap
 
             if (MTx > Lx && MTx < Rx) // нахуя вот эта ебля с постоянными блокировками разблакировками если можно в параметрах к функции передать конкретно значения боль/меньше которых мы жолжны найти
             {
-                return MyTree;
+                return MyTree; // наложить на него мьютекс чтобы передать объект защищенный от редактирования
             }
             else
             {
@@ -618,9 +650,9 @@ class MyMap
     {
         if (MyTree == nullptr)
         {
-//            Sleep(200);
+//            Sleep(100);
             qDebug() << "NULLPTRNULLPTRNULLPTRNULLPTRNULLPTRNULLPTR" << str;
-//            exit(1);
+            exit(1);
         }
     }
     bool try_mtx_lock(Node<T, T2> *&MyTree)
@@ -633,6 +665,7 @@ class MyMap
             return true;
         }
     }
+
 };
 
 int main()
