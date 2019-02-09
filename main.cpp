@@ -21,6 +21,7 @@ class Node //Звено дерева
     Node<T, T2> *l, *r;
     int deth = 0;
     QMutex mtx;
+    bool exist = true;
     Node() : mtx(QMutex::Recursive) {}
 };
 
@@ -132,16 +133,23 @@ class MyMap
             }
 
     }
-
     void del(T key)
+    {
+        if (del_(key) == false)
+            del(key);
+    }
+
+    bool del_(T key)
     {try{
         QVector <Node<T,T2>*> vL;
         Node<T, T2> **node = nullptr;
-        node = get_value_(key, Tree, Tree);
+        node = get_value_(key, Tree, Tree); // получать в залоченном состоянии
+        QMutexLocker node0(&node[0]->mtx);
+        QMutexLocker node1(&node[1]->mtx);
         if (node == nullptr)
         {
             qDebug() << "ITEM NOT FOUND (DEl) whith key " << key << endl;
-            return void();
+            return true;
         }
         if (node[0] == Tree)
         {
@@ -211,66 +219,187 @@ class MyMap
             }
 
 //            qDebug() << "test " << get_for_replace(node[0], node[0])->x;
-            return void();
+            return false;
         }
         not_nullptr(node[0]);
         not_nullptr(node[1]);
+
 //        node[0]->mtx.lock();
 //        node[1]->mtx.lock();
-        if (!tl(node[0], vL)) {unlock_all(vL); del(key); return void();}
-        if (!tl(node[1], vL)) {unlock_all(vL); del(key); return void();}
-        if (node[1]->l != node[0] && node[1]->r != node[0]) // ВАЖНЫЕ ПРОВЕРКИ
-            {unlock_all(vL); del(key); return void();
-            qDebug() << "OCHEN HUEVO OBRATY VNIMANIE fix";}
-        if (node[0]->x != key)                              // ВАЖНЫЕ ПРОВЕРКИ
-            {unlock_all(vL); del(key); return void();
-            qDebug() << "OCHEN HUEVO OBRATY VNIMANIE fix";}
-        if (node[0]->x == key)
-            qDebug() << "<debug> example of output. </debug>";
-//        qDebug() << '\n' << node[0]->x << '\t' << node[1]->x << '\t';
+//        if (!tl(node[0], vL)) {unlock_all(vL); del(key); return void();}
+//        if (!tl(node[1], vL)) {unlock_all(vL); del(key); return void();}
+//        if (node[1]->l != node[0] && node[1]->r != node[0]) // ВАЖНЫЕ ПРОВЕРКИ
+//            {unlock_all(vL); del(key); return void();
+//            qDebug() << "OCHEN HUEVO OBRATY VNIMANIE fix";}
+//        if (node[0]->x != key)                              // ВАЖНЫЕ ПРОВЕРКИ
+//            {unlock_all(vL); del(key); return void();
+//            qDebug() << "OCHEN HUEVO OBRATY VNIMANIE fix";}
+//        if (node[0]->x == key)
+//            qDebug() << "<debug> example of output. </debug>";
+////        qDebug() << '\n' << node[0]->x << '\t' << node[1]->x << '\t';
         if (node[0]->l == nullptr && node[0]->r == nullptr)
         {
+            if (!node[1]->exist)
+            {qDebug() << "1xyevo"; return false;}
+
 //            qDebug() << "object without children" << endl;
             if (node[1]->l == node[0])
                 node[1]->l = nullptr;
             if (node[1]->r == node[0])
                 node[1]->r = nullptr;
+            node[0]->exist = false;
 //            node[0]->mtx.unlock(); //ВАЖНО!
 //            node[1]->mtx.unlock();
 //            delete node[0];
 //            node[0] = nullptr;
-            unlock_all(vL);
-            return void();
+//            unlock_all(vL);
+            qDebug() << "del1 return" << key;
+            return true;
         }
         if (node[0]->l == nullptr && node[0]->r != nullptr)
         {
+            if (!node[1]->exist)
+            {qDebug() << "2xyevo"; return false;}
+
+            if (node[1]->l != node[0] && node[1]->r != node[0]) // ВАЖНЫЕ ПРОВЕРКИ
+            {qDebug() << "OCHEN HUEVO OBRATY VNIMANIE 4fix"; return false;}
+            if (node[0]->x != key)                              // ВАЖНЫЕ ПРОВЕРКИ
+            {qDebug() << "OCHEN HUEVO OBRATY VNIMANIE 5fix"; return false;}
+
 //            qDebug() << "object with only one RIGHT children" << endl;
+            qDebug() << node[0]->x << node[1]->x;
             if (node[1]->l == node[0])
                 node[1]->l = node[0]->r;
             if (node[1]->r == node[0])
                 node[1]->r = node[0]->r;
+            node[0]->exist = false;
 //            node[0]->mtx.unlock();
 //            node[1]->mtx.unlock();
 //            delete node[0];
 //            node[0] = nullptr;
-            unlock_all(vL);
-            return void();
+//            unlock_all(vL);
+            qDebug() << "del2 return" << key;
+            return true;
         }
         if (node[0]->l != nullptr && node[0]->r == nullptr)
         {
+            if (!node[1]->exist)
+            {qDebug() << "3xyevo"; return false;}
+
+            if (node[1]->l != node[0] && node[1]->r != node[0]) // ВАЖНЫЕ ПРОВЕРКИ
+            {qDebug() << "OCHEN HUEVO OBRATY VNIMANIE 4fix"; return false;}
+            if (node[0]->x != key)                              // ВАЖНЫЕ ПРОВЕРКИ
+            {qDebug() << "OCHEN HUEVO OBRATY VNIMANIE 5fix"; return false;}
+
 //            qDebug() << "object with only one LEFT children" << endl;
             if (node[1]->l == node[0])
                 node[1]->l = node[0]->l;
             if (node[1]->r == node[0])
                 node[1]->r = node[0]->l;
+            node[0]->exist = false;
 //            node[0]->mtx.unlock();
 //            node[1]->mtx.unlock();
 //            delete node[0];
 //            node[0] = nullptr;
-            unlock_all(vL);
-            return void();
+//            unlock_all(vL);
+            qDebug() << "del3 return" << key;
+            return true;
         }
-        if (node[0]->l != nullptr && node[0]->r != nullptr && node[0] != node[1]){qDebug() << node[0]->x << node[1]->x; unlock_all(vL);return void();}
+        if (node[0]->l != nullptr && node[0]->r != nullptr && node[0] != node[1])
+        {
+////////////            qDebug() << node[0]->x << node[1]->x; return void();
+            if (!node[1]->exist)
+            {qDebug() << "4xyevo"; return false;}
+
+            QMutexLocker node0l(&node[0]->l->mtx);
+            QMutexLocker node0r(&node[0]->r->mtx);
+            T MTLx = node[0]->l->x;
+            T MTRx = node[0]->r->x;
+            T MTx = node[0]->x;
+            node1.unlock();
+            node0.unlock();
+            node0l.unlock();
+            node0r.unlock();
+
+            /*------ ALL UNLOCK! -------*/
+
+            Node <T, T2> *a1 = get_for_replace(node[0], MTLx, MTRx);
+            if (a1 == nullptr)
+            {
+                node1.relock();
+                node0.relock();
+                node0l.relock();
+                node0r.relock();
+
+                if (!node[1]->exist)
+                {qDebug() << "5xyevo"; return false;}
+
+                if (node[0]->l == nullptr || node[0]->r == nullptr || node[0] == node[1])
+                    {qDebug() << "OCHEN HUEVO OBRATY VNIMANIE 1lolfix"; return false;}
+                if (node[1]->l != node[0] && node[1]->r != node[0]) // ВАЖНЫЕ ПРОВЕРКИ
+                    {qDebug() << "OCHEN HUEVO OBRATY VNIMANIE 1fix"; return false;}
+                if (node[0]->x != key)                              // ВАЖНЫЕ ПРОВЕРКИ
+                    {qDebug() << "OCHEN HUEVO OBRATY VNIMANIE 2fix"; return false;}
+                if (MTLx != node[0]->l->x || MTRx != node[0]->r->x || MTx != node[0]->x)// ВАЖНЫЕ ПРОВЕРКИ
+                    {qDebug() << "OCHEN HUEVO OBRATY VNIMANIE 3fix"; return false;}
+
+                node[0]->r->l = node[0]->l;
+                if (node[1]->l == node[0])
+                    node[1]->l = node[0]->r;
+                if (node[1]->r == node[0])
+                    node[1]->r = node[0]->r;
+                node[0]->exist = false;
+
+                qDebug() << "del4 return" << key;
+                return true;
+            }
+            else
+            {
+                QMutexLocker lockA1(&a1->mtx);
+                T a1x = a1->x;
+                lockA1.unlock();
+/* a1 perent */ Node<T, T2> **nodeTemp = get_value_(a1x, Tree, Tree); // ЭТО ВСЕГО ЛИШЬ ПРЕДПОЛОЖЕНИЕ. ПРОВЕРАЙ ПОЛУЧЕННЫЕ ДАННЫЕ
+                //блокируем клиента, его детей, заменителя, и его предка
+                //а после проверяем все что можно
+                //еще убедиться что не NULLPTR
+                QMutexLocker nodeTemp0(&nodeTemp[0]->mtx);
+                QMutexLocker nodeTemp1(&nodeTemp[1]->mtx);
+
+                node1.relock();
+                node0.relock();
+                node0l.relock();
+                node0r.relock();
+                lockA1.relock();
+
+                if (!node[1]->exist)
+                {qDebug() << "6xyevo"; return false;}
+
+                if (node[0]->l == nullptr || node[0]->r == nullptr || node[0] == node[1])
+                {qDebug() << "OCHEN HUEVO OBRATY VNIMANIE 2lolfix"; return false;}
+                if (node[1]->l != node[0] && node[1]->r != node[0]) // ВАЖНЫЕ ПРОВЕРКИ
+                {qDebug() << "OCHEN HUEVO OBRATY VNIMANIE 4fix"; return false;}
+                if (node[0]->x != key)                              // ВАЖНЫЕ ПРОВЕРКИ
+                {qDebug() << "OCHEN HUEVO OBRATY VNIMANIE 5fix"; return false;}
+                if (MTLx != node[0]->l->x || MTRx != node[0]->r->x || MTx != node[0]->x)// ВАЖНЫЕ ПРОВЕРКИ
+                {qDebug() << "OCHEN HUEVO OBRATY VNIMANIE 6fix"; return false;}
+                if (a1 != nodeTemp[0] || nodeTemp[0]->x != a1x)
+                {qDebug() << "OCHEN HUEVO OBRATY VNIMANIE 7fix"; return false;}
+                if (nodeTemp[1]->l != nodeTemp[0] && nodeTemp[1]->r != nodeTemp[0])// ВАЖНЫЕ ПРОВЕРКИ
+                {qDebug() << "OCHEN HUEVO OBRATY VNIMANIE 8fix"; return false;}
+
+                node[0]->x = nodeTemp[0]->x;
+                node[0]->x2 = nodeTemp[0]->x2;
+
+                if (nodeTemp[1]->l == nodeTemp[0])
+                    nodeTemp[1]->l = nullptr;
+                if (nodeTemp[1]->r == nodeTemp[0])
+                    nodeTemp[1]->r = nullptr;
+                nodeTemp[0]->exist = false;
+
+                qDebug() << "del5 return" << key;
+                return true;
+            }
+        }
 //        {
 ////            node[1]->mtx.unlock();
 //            tun(node[1],vL);
@@ -500,10 +629,7 @@ class MyMap
 //            unlock_all(vL); del(key); return void();
 //            return void();
 //        }
-        unlock_all(vL); del(key); return void();
-        qDebug() << "VERY BAD";
-        node[0]->mtx.unlock();
-        node[1]->mtx.unlock();
+        qDebug() << "is bed!!!!!!!!!!";
         }catch (...) {
             cout << "AXYEHHO";
         }
@@ -609,10 +735,10 @@ class MyMap
     {try{
             //        cout << MyTree->x << "aa";
 //            MyTree->mtx(QMutex::Recursive);
-            QMutexLocker locker(&MyTree->mtx);
+//            QMutexLocker locker(&MyTree->mtx);
             if (MyTree != nullptr)
             {;
-//                MyTree->mtx.lock();
+                MyTree->mtx.lock();
             }
             else {
                 qDebug() << "ATTENTION!!!!!!!!!!!!!!!!get_value_";
@@ -624,14 +750,15 @@ class MyMap
                 Node<T, T2> **temp = new Node<T, T2>* [2] {nullptr, nullptr}; // первый эдемент с нужным ключем второй элемент родитель данного
                 temp[0] = MyTree;
                 temp[1] = ParentTree;
-//                MyTree->mtx.unlock();
+                MyTree->mtx.unlock();
                 return temp;
             }
             else
             {
                 Node<T, T2> *tempL = MyTree->l;
                 Node<T, T2> *tempR = MyTree->r;
-//                MyTree->mtx.unlock();
+//                locker.unlock();
+                MyTree->mtx.unlock();
                 if (tempL != nullptr && get_value_(key, tempL, MyTree) != nullptr)
                 {
                     return get_value_(key, tempL, MyTree);
@@ -686,6 +813,7 @@ class MyMap
         {
             Node<T, T2> *tR = MyTree->r;
             Node<T, T2> *tL = MyTree->l;
+            locker.unlock();
 //            MyTree->mtx.unlock();
             Node<T, T2> *resR = nullptr;
             Node<T, T2> *resL = nullptr;
@@ -777,7 +905,10 @@ class MyMap
         QMutexLocker locker(&Tree->mtx);
         Node <T, T2> * temp = Tree;
 //        Tree->mtx.unlock();
+        QMutexLocker locker1(&Tree->mtx);
+        qDebug() << "strange";
         locker.unlock();
+        locker1.unlock();
         Node <T, T2> * temp1 = get_for_replace(temp, a, b);
         Node <T, T2> * temp2 = get_value_(49, temp, temp)[0];
         qDebug() << "norm";
@@ -804,7 +935,7 @@ int main()
     obj->add_node(50,1);
     obj->add_node(51,1);
 //    Sleep(100);
-//    obj->show();
+    obj->show();
 //    qDebug() << obj.get_value(52);
 //    thread t1 (&MyMap<int,int>::add_node, obj, 1, 1);
 //    thread t2 (&MyMap<int,int>::add_node, obj, 1, 1);
@@ -812,12 +943,18 @@ int main()
 //    t2.join();
     Sleep(50);
 //    obj->show();
-    thread t1 (&MyMap<int,double>::test, obj);
-    thread t2 (&MyMap<int,double>::test, obj);
-    thread t3 (&MyMap<int,double>::test, obj);
-    thread t4 (&MyMap<int,double>::test, obj);
-    thread t5 (&MyMap<int,double>::test, obj);
-    thread t6 (&MyMap<int,double>::test, obj);
+//    thread t1 (&MyMap<int,double>::test, obj);
+//    thread t2 (&MyMap<int,double>::test, obj);
+//    thread t3 (&MyMap<int,double>::test, obj);
+//    thread t4 (&MyMap<int,double>::test, obj);
+//    thread t5 (&MyMap<int,double>::test, obj);
+//    thread t6 (&MyMap<int,double>::test, obj);
+    thread t1 (&MyMap<int,double>::del, obj, 34);
+    thread t2 (&MyMap<int,double>::del, obj, 49);
+    thread t3 (&MyMap<int,double>::del, obj, 52);
+    thread t4 (&MyMap<int,double>::del, obj, 51);
+    thread t5 (&MyMap<int,double>::del, obj, 54);
+    thread t6 (&MyMap<int,double>::del, obj, 50);
 //    thread t7 (&MyMap<int,double>::del, obj, 50);
 //    t1.join();
 //    t2.join();
@@ -836,7 +973,7 @@ int main()
 //    Sleep(100);
 //    obj->show();
 //    obj->show();
-    Sleep(50);
+    Sleep(100);
     cout << "---------------------------------------------";
 //    obj->approve();
     obj->show();
